@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BiteDash - Gourmet Food Delivered Fast</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel for JSX compilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Google Font: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const API_BASE = '/api';
+
+    // Fallback dishes in case server is not running
+    const FALLBACK_DISHES = [
+      {
+        id: 1,
+        name: "Artisan Truffle Burger",
+        category: "Burgers",
+        price: 14.99,
+        rating: 4.8,
+        reviews: 320,
+        prepTime: "15-20 min",
+        calories: "680 kcal",
+        isVeg: false,
+        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80",
+        description: "Double smashed Angus beef, black truffle aioli, aged cheddar, arugula on brioche."
+      },
+      {
+        id: 2,
+        name: "Neapolitan Margherita",
+        category: "Pizza",
+        price: 12.50,
+        rating: 4.9,
+        reviews: 512,
+        prepTime: "20-25 min",
+        calories: "540 kcal",
+        isVeg: true,
+        image: "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=600&q=80",
+        description: "San Marzano tomato sauce, fresh buffalo mozzarella, fragrant sweet basil, olive oil."
+      },
+      {
+        id: 3,
+        name: "Dragon Salmon Roll",
+        category: "Sushi",
+        price: 16.99,
+        rating: 4.7,
+        reviews: 210,
+        prepTime: "20-30 min",
+        calories: "420 kcal",
+        isVeg: false,
+        image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80",
+        description: "Torched Atlantic salmon, tempura shrimp, avocado, cucumber, unagi glaze, spicy mayo."
+      },
+      {
+        id: 4,
+        name: "Golden Quinoa & Avocado Bowl",
+        category: "Bowls",
+        price: 11.99,
+        rating: 4.6,
+        reviews: 145,
+        prepTime: "10-15 min",
+        calories: "380 kcal",
+        isVeg: true,
+        image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
+        description: "Organic rainbow quinoa, ripe Hass avocado, cherry tomatoes, edamame, citrus tahini."
+      },
+      {
+        id: 5,
+        name: "Creamy Truffle Tagliatelle",
+        category: "Pasta",
+        price: 15.50,
+        rating: 4.8,
+        reviews: 290,
+        prepTime: "20-25 min",
+        calories: "620 kcal",
+        isVeg: true,
+        image: "https://images.unsplash.com/photo-1621996346565-e3d5d6281724?auto=format&fit=crop&w=600&q=80",
+        description: "Fresh hand-rolled pasta, Parmigiano Reggiano, wild forest mushrooms, black truffle."
+      },
+      {
+        id: 6,
+        name: "Crunchy Korean Fried Chicken",
+        category: "Burgers",
+        price: 13.99,
+        rating: 4.9,
+        reviews: 480,
+        prepTime: "15-20 min",
+        calories: "720 kcal",
+        isVeg: false,
+        image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80",
+        description: "Double fried crispy chicken breast tossed in sweet & spicy gochujang glaze."
+      }
+    ];
+
+    function App() {
+      const [dishes, setDishes] = useState([]);
+      const [categories, setCategories] = useState(["All", "Burgers", "Pizza", "Sushi", "Bowls", "Pasta", "Desserts", "Drinks"]);
+      const [loading, setLoading] = useState(true);
+      const [apiConnected, setApiConnected] = useState(false);
+
+      const [selectedCategory, setSelectedCategory] = useState("All");
+      const [searchQuery, setSearchQuery] = useState("");
+      const [onlyVeg, setOnlyVeg] = useState(false);
+
+      const [cart, setCart] = useState({});
+      const [isCartOpen, setIsCartOpen] = useState(false);
+      const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+      const [activeOrder, setActiveOrder] = useState(null);
+      const [promoCode, setPromoCode] = useState("");
+      const [appliedDiscount, setAppliedDiscount] = useState(0);
+      const [tip, setTip] = useState(3.00);
+
+      // Customer checkout state
+      const [customerName, setCustomerName] = useState("Alex Morgan");
+      const [address, setAddress] = useState("742 Evergreen Terrace, Springfield");
+      const [phone, setPhone] = useState("+1 (555) 234-5678");
+      const [paymentMethod, setPaymentMethod] = useState("card");
+      const [submittingOrder, setSubmittingOrder] = useState(false);
+
+      // Fetch dishes & categories from Backend API
+      useEffect(() => {
+        async function fetchData() {
+          try {
+            const [catRes, dishRes] = await Promise.all([
+              fetch(`${API_BASE}/categories`).catch(() => null),
+              fetch(`${API_BASE}/dishes`).catch(() => null)
+            ]);
+
+            if (dishRes && dishRes.ok) {
+              const dishData = await dishRes.json();
+              setDishes(dishData.data || FALLBACK_DISHES);
+              setApiConnected(true);
+            } else {
+              setDishes(FALLBACK_DISHES);
+            }
+
+            if (catRes && catRes.ok) {
+              const catData = await catRes.json();
+              if (catData.data) setCategories(catData.data);
+            }
+          } catch (err) {
+            console.warn("Using offline fallback data:", err);
+            setDishes(FALLBACK_DISHES);
+          } finally {
+            setLoading(false);
+          }
+        }
+        fetchData();
+      }, []);
+
+      // Auto poll order updates from backend if activeOrder exists
+      useEffect(() => {
+        if (!activeOrder || !apiConnected) return;
+
+        const interval = setInterval(async () => {
+          try {
+            const res = await fetch(`${API_BASE}/orders/${activeOrder.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.data) {
+                setActiveOrder(data.data);
+              }
+            }
+          } catch (e) {
+            // ignore network glitch during polling
+          }
+        }, 3000);
+
+        return () => clearInterval(interval);
+      }, [activeOrder, apiConnected]);
+
+      // Cart calculations
+      const cartItems = useMemo(() => {
+        return Object.entries(cart)
+          .map(([id, qty]) => {
+            const dish = dishes.find(d => d.id === parseInt(id));
+            return dish ? { ...dish, quantity: qty } : null;
+          })
+          .filter(Boolean);
+      }, [cart, dishes]);
+
+      const totalItemsCount = useMemo(() => {
+        return Object.values(cart).reduce((sum, q) => sum + q, 0);
+      }, [cart]);
+
+      const subtotal = useMemo(() => {
+        return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      }, [cartItems]);
+
+      const deliveryFee = subtotal > 35 || subtotal === 0 ? 0.00 : 3.49;
+      const discountAmount = subtotal * appliedDiscount;
+      const tax = (subtotal - discountAmount) * 0.08;
+      const finalTotal = Math.max(0, subtotal - discountAmount + deliveryFee + tax + (subtotal > 0 ? tip : 0));
+
+      const updateCart = (dishId, delta) => {
+        setCart(prev => {
+          const current = prev[dishId] || 0;
+          const next = current + delta;
+          if (next <= 0) {
+            const copy = { ...prev };
+            delete copy[dishId];
+            return copy;
+          }
+          return { ...prev, [dishId]: next };
+        });
+      };
+
+      const handleApplyPromo = () => {
+        if (promoCode.trim().toUpperCase() === "QUICK20") {
+          setAppliedDiscount(0.20);
+          alert("Success! 20% discount applied to your order.");
+        } else {
+          alert("Invalid coupon code. Try 'QUICK20' for 20% off!");
+        }
+      };
+
+      // Submit order to Backend REST API
+      const handlePlaceOrder = async (e) => {
+        e.preventDefault();
+        setSubmittingOrder(true);
+
+        const orderPayload = {
+          customerName,
+          address,
+          phone,
+          paymentMethod,
+          items: cartItems.map(item => ({ id: item.id, quantity: item.quantity })),
+          tip,
+          promoCode: appliedDiscount > 0 ? promoCode : ''
+        };
+
+        try {
+          if (apiConnected) {
+            const res = await fetch(`${API_BASE}/orders`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(orderPayload)
+            });
+            const result = await res.json();
+            if (result.success) {
+              setActiveOrder(result.data);
+            } else {
+              throw new Error(result.message);
+            }
+          } else {
+            // Local simulation if backend is not started
+            const simulated = {
+              id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
+              customerName,
+              address,
+              items: cartItems,
+              total: finalTotal,
+              status: 'confirmed',
+              createdAt: new Date().toISOString()
+            };
+            setActiveOrder(simulated);
+            setTimeout(() => setActiveOrder(prev => ({ ...prev, status: 'preparing' })), 4000);
+            setTimeout(() => setActiveOrder(prev => ({ ...prev, status: 'out_for_delivery' })), 9000);
+          }
+
+          setCart({});
+          setIsCheckoutOpen(false);
+          setIsCartOpen(false);
+        } catch (err) {
+          alert("Error placing order: " + err.message);
+        } finally {
+          setSubmittingOrder(false);
+        }
+      };
+
+      // Filtered Dishes list
+      const filteredDishes = useMemo(() => {
+        return dishes.filter(dish => {
+          const matchCat = selectedCategory === "All" || dish.category.toLowerCase() === selectedCategory.toLowerCase();
+          const matchVeg = !onlyVeg || dish.isVeg;
+          const matchSearch = dish.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              dish.description.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchCat && matchVeg && matchSearch;
+        });
+      }, [dishes, selectedCategory, onlyVeg, searchQuery]);
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          {/* Top Banner */}
+          <div className="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white text-xs font-semibold py-2 px-4 flex items-center justify-between">
+            <span className="mx-auto">
+              🎉 <strong>Flash Offer:</strong> Free delivery on all orders over $35 + use code <span className="underline font-bold">QUICK20</span> for 20% off!
+            </span>
+            <div className="hidden md:flex items-center gap-2 text-[10px]">
+              <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-emerald-400' : 'bg-amber-300'}`}></span>
+              <span>{apiConnected ? 'Backend Connected' : 'Frontend Standalone Mode'}</span>
+            </div>
+          </div>
+
+          {/* Navigation Bar */}
+          <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+              
+              {/* Logo */}
+              <div className="flex items-center gap-3 cursor-pointer">
+                <div className="w-11 h-11 bg-orange-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/30">
+                  🍔
+                </div>
+                <div>
+                  <div className="text-2xl font-black tracking-tight text-slate-900">
+                    Bite<span className="text-orange-500">Dash</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-medium -mt-1 flex items-center gap-1">
+                    <span>📍 Deliver to:</span>
+                    <span className="text-slate-700 font-semibold underline decoration-orange-400 cursor-pointer">
+                      {address.split(',')[0]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="flex-1 max-w-md hidden md:block">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search burgers, pasta, sushi, bowls..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-8 py-2.5 bg-slate-100/90 border border-transparent focus:border-orange-500 focus:bg-white rounded-full text-sm outline-none transition ring-4 ring-transparent focus:ring-orange-500/10"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 hover:text-slate-600">
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Cart & Status */}
+              <div className="flex items-center gap-3">
+                {activeOrder && (
+                  <button
+                    onClick={() => {}}
+                    className="hidden sm:flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    Order #{activeOrder.id} Active
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsCartOpen(true)}
+                  className="relative flex items-center gap-2.5 bg-slate-900 hover:bg-orange-600 text-white font-medium px-4 py-2.5 rounded-full transition-all shadow hover:shadow-orange-500/20 active:scale-95"
+                >
+                  <span className="text-lg">🛒</span>
+                  <span className="text-sm font-semibold hidden sm:inline">Cart</span>
+                  {totalItemsCount > 0 && (
+                    <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {totalItemsCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Hero Banner */}
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 w-full">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-orange-950 text-white p-8 md:p-12 shadow-2xl">
+              <div className="max-w-xl z-10 relative">
+                <span className="inline-block bg-orange-500/20 text-orange-400 font-semibold text-xs tracking-wider uppercase px-3 py-1 rounded-full mb-3 border border-orange-500/30">
+                  ⚡ 20-30 Minute Express Delivery
+                </span>
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                  Hot, artisanal meals <br/><span className="text-orange-500">at your doorstep</span>.
+                </h1>
+                <p className="mt-3 text-slate-300 text-sm md:text-base leading-relaxed">
+                  Explore fresh gourmet creations crafted with premium ingredients by top neighborhood culinary masters.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href="#menu-grid" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-full font-bold text-sm transition shadow-lg shadow-orange-500/30">
+                    Order Now
+                  </a>
+                  <button
+                    onClick={() => setOnlyVeg(!onlyVeg)}
+                    className={`px-5 py-3 rounded-full font-semibold text-sm transition border ${onlyVeg ? 'bg-emerald-600 border-emerald-500 text-white' : 'border-white/20 bg-white/10 hover:bg-white/20 text-white'}`}
+                  >
+                    🌱 {onlyVeg ? 'Veg Only: Active' : 'Vegetarian Only'}
+                  </button>
+                </div>
+              </div>
+              <div className="absolute right-[-40px] bottom-[-40px] opacity-15 md:opacity-25 text-[240px] select-none pointer-events-none">
+                🍕
+              </div>
+            </div>
+          </section>
+
+          {/* Category Filter Pills */}
+          <section className="sticky top-20 z-20 bg-slate-50/95 backdrop-blur-md py-4 border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
+                      selectedCategory.toLowerCase() === cat.toLowerCase()
+                        ? "bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-105"
+                        : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-slate-300">
+                <button
+                  onClick={() => setOnlyVeg(!onlyVeg)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition ${
+                    onlyVeg ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-white text-slate-600 border border-slate-200"
+                  }`}
+                >
+                  <span>🥬</span> Vegetarian
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Dishes Menu Grid */}
+          <main id="menu-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                  {selectedCategory === "All" ? "Featured Dishes" : `${selectedCategory}`}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">Showing {filteredDishes.length} freshly curated items</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-20 text-slate-400 font-medium">Loading delicious items...</div>
+            ) : filteredDishes.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 p-8">
+                <span className="text-5xl">🍲</span>
+                <h3 className="mt-4 text-base font-bold text-slate-800">No dishes match your filter</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Try clearing your search query or switching categories.</p>
+                <button
+                  onClick={() => { setSearchQuery(""); setSelectedCategory("All"); setOnlyVeg(false); }}
+                  className="mt-4 bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-orange-600 transition"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredDishes.map((dish) => {
+                  const qty = cart[dish.id] || 0;
+                  return (
+                    <div
+                      key={dish.id}
+                      className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group"
+                    >
+                      <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+                        <img
+                          src={dish.image}
+                          alt={dish.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        {dish.isVeg && (
+                          <span className="absolute top-3 left-3 bg-emerald-500 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow">
+                            🌱 Veg
+                          </span>
+                        )}
+                        <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md text-white text-[11px] font-medium px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <span>⏱</span> {dish.prepTime}
+                        </div>
+                      </div>
+
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-[11px] font-bold text-orange-600 uppercase tracking-wider">{dish.category}</span>
+                            <div className="flex items-center text-xs font-bold text-amber-500">
+                              ★ <span className="text-slate-700 ml-1">{dish.rating}</span>
+                              <span className="text-slate-400 font-normal text-[10px] ml-0.5">({dish.reviews})</span>
+                            </div>
+                          </div>
+
+                          <h3 className="font-bold text-slate-900 text-base leading-snug group-hover:text-orange-600 transition">
+                            {dish.name}
+                          </h3>
+                          <p className="mt-1 text-slate-500 text-xs line-clamp-2 leading-relaxed">
+                            {dish.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs text-slate-400 block font-medium">Price</span>
+                            <span className="text-lg font-black text-slate-900">${dish.price.toFixed(2)}</span>
+                          </div>
+
+                          {qty === 0 ? (
+                            <button
+                              onClick={() => updateCart(dish.id, 1)}
+                              className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-md shadow-orange-500/20 active:scale-95"
+                            >
+                              + Add
+                            </button>
+                          ) : (
+                            <div className="flex items-center bg-slate-900 text-white rounded-xl p-1 gap-2 shadow">
+                              <button
+                                onClick={() => updateCart(dish.id, -1)}
+                                className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center font-bold text-sm"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-bold px-1">{qty}</span>
+                              <button
+                                onClick={() => updateCart(dish.id, 1)}
+                                className="w-6 h-6 rounded-lg bg-orange-500 hover:bg-orange-600 flex items-center justify-center font-bold text-sm"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
+
+          {/* Cart Slide-Over Drawer */}
+          {isCartOpen && (
+            <div className="fixed inset-0 z-50 overflow-hidden">
+              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>
+              <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+                <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+                  <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🛍️</span>
+                      <h2 className="text-lg font-extrabold text-slate-900">Your Basket</h2>
+                      <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                        {totalItemsCount} items
+                      </span>
+                    </div>
+                    <button onClick={() => setIsCartOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-5 divide-y divide-slate-100">
+                    {cartItems.length === 0 ? (
+                      <div className="text-center py-20 text-slate-400 text-sm">
+                        <span className="text-6xl block mb-3">🛒</span>
+                        Your cart is empty. Add delicious items to get started!
+                      </div>
+                    ) : (
+                      cartItems.map(item => (
+                        <div key={item.id} className="py-4 flex gap-3 items-center">
+                          <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
+                            <span className="text-xs text-orange-600 font-extrabold">${(item.price * item.quantity).toFixed(2)}</span>
+                            <div className="text-[10px] text-slate-400">${item.price.toFixed(2)} each</div>
+                          </div>
+                          <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-2">
+                            <button onClick={() => updateCart(item.id, -1)} className="w-5 h-5 bg-white rounded shadow-sm text-xs font-bold">-</button>
+                            <span className="text-xs font-bold text-slate-800">{item.quantity}</span>
+                            <button onClick={() => updateCart(item.id, 1)} className="w-5 h-5 bg-white rounded shadow-sm text-xs font-bold">+</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {cartItems.length > 0 && (
+                    <div className="p-5 border-t border-slate-200 bg-slate-50 space-y-4">
+                      {/* Coupon */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Promo code (QUICK20)"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs uppercase font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <button
+                          onClick={handleApplyPromo}
+                          className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
+                        >
+                          Apply
+                        </button>
+                      </div>
+
+                      {/* Driver Tip */}
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-500 mb-1.5">Add Driver Tip</div>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[2.00, 3.00, 5.00, 0].map(amt => (
+                            <button
+                              key={amt}
+                              onClick={() => setTip(amt)}
+                              className={`py-1 rounded-lg text-xs font-bold border transition ${
+                                tip === amt ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-700 border-slate-200"
+                              }`}
+                            >
+                              {amt === 0 ? "None" : `$${amt}`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span className="font-semibold text-slate-900">${subtotal.toFixed(2)}</span>
+                        </div>
+                        {appliedDiscount > 0 && (
+                          <div className="flex justify-between text-emerald-600 font-semibold">
+                            <span>Discount (20%)</span>
+                            <span>-${discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span>Delivery Fee {subtotal > 35 && <span className="text-emerald-600 font-bold">(Free)</span>}</span>
+                          <span className="font-semibold text-slate-900">${deliveryFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Estimated Tax (8%)</span>
+                          <span className="font-semibold text-slate-900">${tax.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Driver Tip</span>
+                          <span className="font-semibold text-slate-900">${tip.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
+                          <span>Total</span>
+                          <span className="text-base text-orange-600">${finalTotal.toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 transition text-sm"
+                      >
+                        Checkout • ${finalTotal.toFixed(2)}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Checkout Modal */}
+          {isCheckoutOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)}></div>
+              <div className="relative bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl z-10">
+                <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                  <h3 className="font-extrabold text-lg text-slate-900">Delivery Information</h3>
+                  <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                </div>
+
+                <form onSubmit={handlePlaceOrder} className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Recipient Name</label>
+                    <input
+                      required
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Street Address</label>
+                    <input
+                      required
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Contact Phone</label>
+                      <input
+                        required
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Payment Method</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                      >
+                        <option value="card">💳 Credit/Debit Card</option>
+                        <option value="apple_pay"> Apple Pay</option>
+                        <option value="cod">💵 Cash on Delivery</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingOrder}
+                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-slate-400 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 transition text-sm mt-2 flex items-center justify-center gap-2"
+                  >
+                    {submittingOrder ? 'Placing Order...' : `Confirm & Place Order • $${finalTotal.toFixed(2)}`}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Live Order Tracker Modal */}
+          {activeOrder && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={() => setActiveOrder(null)}></div>
+              <div className="relative bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl z-10 text-center">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 animate-bounce">
+                  🛵
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Order Confirmed!</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Order ID: <span className="font-bold text-slate-800">{activeOrder.id}</span>
+                </p>
+
+                {/* Progress Pipeline */}
+                <div className="mt-6 text-left space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Order Placed & Confirmed</div>
+                      <div className="text-[10px] text-slate-400">Order sent to restaurant database</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold ${
+                      activeOrder.status === 'preparing' || activeOrder.status === 'out_for_delivery' || activeOrder.status === 'delivered'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 text-slate-600 animate-pulse'
+                    }`}>
+                      {activeOrder.status === 'preparing' || activeOrder.status === 'out_for_delivery' || activeOrder.status === 'delivered' ? '✓' : '2'}
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Kitchen Preparation</div>
+                      <div className="text-[10px] text-slate-400">Freshly fired and packed</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold ${
+                      activeOrder.status === 'out_for_delivery' || activeOrder.status === 'delivered'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {activeOrder.status === 'out_for_delivery' || activeOrder.status === 'delivered' ? '✓' : '3'}
+                    </span>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Out for Delivery</div>
+                      <div className="text-[10px] text-slate-400">Courier en route to {activeOrder.address}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-left">
+                  <div className="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80" className="w-10 h-10 rounded-full object-cover" alt="Driver" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">David Miller</div>
+                      <div className="text-[10px] text-slate-400">Courier • 4.9 ★ (E-bike)</div>
+                    </div>
+                  </div>
+                  <button onClick={() => alert("Calling courier...")} className="bg-slate-100 hover:bg-slate-200 p-2 rounded-xl text-slate-700 text-sm">
+                    📞 Call
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setActiveOrder(null)}
+                  className="mt-6 w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl text-xs transition"
+                >
+                  Close & Continue Shopping
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="bg-white border-t border-slate-200 mt-16 py-8">
+            <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 space-y-2">
+              <p className="font-semibold text-slate-600">BiteDash Full-Stack Food Platform © 2026</p>
+              <p>Node.js Express REST API • Persistent Database • Tailwind CSS Frontend</p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
