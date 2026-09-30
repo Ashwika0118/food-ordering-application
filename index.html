@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodDash - Order Delicious Food Online</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <i class="fa-solid fa-utensils"></i> Food<span>Dash</span>
+            </a>
+            
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search for burgers, pizza, sushi...">
+            </div>
+
+            <div class="nav-actions">
+                <button class="cart-btn" id="cartToggleBtn">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    <span>Cart</span>
+                    <span class="cart-badge" id="cartCount">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>All Fast Food <br><span>Collected In One Place</span></h1>
+            <p>Discover the best food from over 1,000 restaurants and fast delivery to your doorstep.</p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <h3>1,000+</h3>
+                    <p>Restaurants</p>
+                </div>
+                <div class="stat">
+                    <h3>15 Min</h3>
+                    <p>Fast Delivery</p>
+                </div>
+                <div class="stat">
+                    <h3>4.8</h3>
+                    <p>Customer Rating</p>
+                </div>
+            </div>
+        </div>
+        <div class="hero-img">
+            <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80" alt="Delicious Food">
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Categories Section -->
+        <section class="categories-section">
+            <h2>Categories</h2>
+            <div class="categories-grid" id="categoriesContainer">
+                <!-- Dynamic Categories will load here -->
+            </div>
+        </section>
+
+        <!-- Food Items Section -->
+        <section class="food-section">
+            <div class="section-header">
+                <h2 id="sectionTitle">Featured Dishes</h2>
+                <div class="sort-dropdown">
+                    <select id="sortSelect">
+                        <option value="default">Sort by: Default</option>
+                        <option value="price-low">Price: Low to High</option>
+                        <option value="price-high">Price: High to Low</option>
+                        <option value="rating">Highest Rated</option>
+                    </select>
+                </div>
+            </div>
+            <div class="food-grid" id="foodGrid">
+                <!-- Dynamic Food Cards will load here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Slide-out Cart Drawer -->
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <div class="cart-drawer" id="cartDrawer">
+        <div class="cart-header">
+            <h3>Your Order</h3>
+            <button class="close-cart" id="closeCartBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cart-items" id="cartItemsContainer">
+            <!-- Cart items will appear here -->
+            <div class="empty-cart" id="emptyCartMsg">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <p>Your cart is empty</p>
+            </div>
+        </div>
+        <div class="cart-footer" id="cartFooter" style="display: none;">
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span id="cartSubtotal">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery Fee</span>
+                    <span id="deliveryFee">$2.99</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span id="cartTotal">$0.00</span>
+                </div>
+            </div>
+            <button class="checkout-btn" id="checkoutBtn">Proceed to Checkout</button>
+        </div>
+    </div>
+
+    <!-- Checkout Modal Success -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="success-modal">
+            <div class="success-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h2>Order Placed Successfully!</h2>
+            <p>Thank you for ordering with FoodDash. Your food is on the way!</p>
+            <button class="modal-close-btn" id="modalCloseBtn">Back to Home</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 FoodDash Inc. All Rights Reserved.</p>
+    </footer>
+
+    <script src="script.index.js"></script>
+</body>
+</html>
